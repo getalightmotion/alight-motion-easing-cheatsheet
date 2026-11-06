@@ -2,7 +2,7 @@
 
 An unofficial reference for choosing easing curves in mobile motion design and video edits, with a small interactive page that compares each curve with linear motion.
 
-**Try it:** open `index.html` in a browser, pick a curve and press **Play**.
+**[Try the live page](https://getalightmotion.github.io/alight-motion-easing-cheatsheet/):** pick a curve and press **Play**.
 
 ## Which curve to use
 
