@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Easing Curve Cheat Sheet for Alight Motion Editors</title>
+<meta name="description" content="Compare linear, ease-in, ease-out, ease-in-out and overshoot motion side by side, with suggested durations for mobile video edits.">
+<style>
+  :root { --navy:#07142c; --panel:#0d2238; --mint:#00d6a0; --pale:#d9fff4; --mute:#a9c0cf; --line:#2c4258; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--navy); color:#fff; font:16px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif; }
+  main { max-width:760px; margin:0 auto; padding:32px 16px 48px; }
+  h1 { font:700 clamp(28px,6vw,40px)/1.15 Georgia,serif; margin:0 0 8px; }
+  p { color:var(--mute); margin:0 0 20px; }
+  a { color:var(--mint); }
+  .tabs { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; }
+  button { font:inherit; font-weight:600; color:#fff; background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:8px 14px; cursor:pointer; }
+  button[aria-pressed="true"] { background:var(--mint); border-color:var(--mint); color:var(--navy); }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:20px; }
+  svg { display:block; width:100%; max-width:320px; margin:0 auto 16px; }
+  .track { position:relative; height:44px; background:var(--navy); border-radius:8px; margin-bottom:10px; overflow:hidden; }
+  .dot { position:absolute; top:8px; left:8px; width:28px; height:28px; border-radius:50%; background:var(--mint); }
+  .label { font-size:14px; color:var(--mute); margin-bottom:4px; }
+  .controls { display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin:16px 0; }
+  input[type=range] { flex:1; min-width:140px; }
+  dl { margin:16px 0 0; }
+  dt { font-weight:700; color:var(--pale); }
+  dd { margin:0 0 10px; color:var(--mute); }
+  code { color:var(--pale); }
+  footer { margin-top:28px; font-size:14px; color:var(--mute); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Easing curve cheat sheet</h1>
+  <p>Pick a curve, press play, and compare it with linear motion over the same duration. Use the shape as a guide when you adjust a curve in the Alight Motion Curve Editor.</p>
+
+  <div class="tabs" id="tabs" role="group" aria-label="Choose a curve"></div>
+
+  <section class="panel">
+    <svg id="graph" viewBox="-10 -40 220 260" role="img" aria-labelledby="graphTitle">
+      <title id="graphTitle">Selected easing curve</title>
+      <rect x="0" y="0" width="200" height="200" fill="none" stroke="#2c4258" stroke-width="2"/>
+      <path id="curve" fill="none" stroke="#00d6a0" stroke-width="5" stroke-linecap="round"/>
+      <text x="100" y="216" fill="#a9c0cf" font-size="11" text-anchor="middle">time</text>
+      <text x="-14" y="100" fill="#a9c0cf" font-size="11" text-anchor="middle" transform="rotate(-90 -4 100)">progress</text>
+    </svg>
+
+    <div class="label" id="selectedLabel">Selected curve</div>
+    <div class="track"><div class="dot" id="dotA"></div></div>
+    <div class="label">Linear, for comparison</div>
+    <div class="track"><div class="dot" id="dotB"></div></div>
+
+    <div class="controls">
+      <button id="play" type="button">Play</button>
+      <label for="frames">Frames at 30 fps</label>
+      <input id="frames" type="range" min="6" max="60" value="18">
+      <output id="framesOut" for="frames">18</output>
+    </div>
+
+    <dl>
+      <dt>Use it for</dt><dd id="useFor"></dd>
+      <dt>Suggested starting length</dt><dd id="length"></dd>
+      <dt>CSS-style control points</dt><dd><code id="bezier"></code></dd>
+    </dl>
+  </section>
+
+  <footer>
+    Made by <a href="https://getalightmotion.com/">GetAlightMotion</a>. Unofficial, and not affiliated with Alight Creative or Bending Spoons. MIT licensed.
+  </footer>
+</main>
+<script>
+const CURVES = [
+  { name: 'Linear', b: [0, 0, 1, 1], use: 'Constant motion: rotating loaders, tickers, scrolling backgrounds', f: null },
+  { name: 'Ease-in', b: [0.55, 0.06, 0.68, 0.19], use: 'Leaving: a layer exits the frame or fades away', f: [8, 12] },
+  { name: 'Ease-out', b: [0.22, 0.61, 0.36, 1], use: 'Arriving: a title or logo enters and settles', f: [12, 18] },
+  { name: 'Ease-in-out', b: [0.65, 0.05, 0.36, 1], use: 'Travelling between two visible positions, pans and zooms', f: [20, 40] },
+  { name: 'Overshoot', b: [0.34, 1.56, 0.64, 1], use: 'Pop: stickers, emoji and captions that pass the target and settle back', f: [12, 16] }
+];
+const $ = id => document.getElementById(id);
+let current = CURVES[2];
+let timer = null;
+
+function css(b) { return 'cubic-bezier(' + b.join(', ') + ')'; }
+
+function select(c) {
+  current = c;
+  document.querySelectorAll('#tabs button').forEach(btn => {
+    btn.setAttribute('aria-pressed', String(btn.textContent === c.name));
+  });
+  const [x1, y1, x2, y2] = c.b;
+  $('curve').setAttribute('d', 'M0 200 C' + x1 * 200 + ' ' + (200 - y1 * 200) + ' ' + x2 * 200 + ' ' + (200 - y2 * 200) + ' 200 0');
+  $('selectedLabel').textContent = c.name;
+  $('useFor').textContent = c.use;
+  $('length').textContent = c.f ? c.f[0] + '–' + c.f[1] + ' frames at 30 fps' : 'Any length';
+  $('bezier').textContent = css(c.b);
+  if (c.f) { $('frames').value = c.f[1]; $('framesOut').textContent = c.f[1]; }
+  reset();
+}
+
+function reset() {
+  clearTimeout(timer);
+  [$('dotA'), $('dotB')].forEach(d => { d.style.transition = 'none'; d.style.left = '8px'; });
+}
+
+function play() {
+  reset();
+  void $('dotA').offsetWidth;
+  const secs = Number($('frames').value) / 30;
+  const end = 'calc(100% - 36px)';
+  $('dotA').style.transition = 'left ' + secs + 's ' + css(current.b);
+  $('dotB').style.transition = 'left ' + secs + 's linear';
+  $('dotA').style.left = end;
+  $('dotB').style.left = end;
+  timer = setTimeout(reset, secs * 1000 + 700);
+}
+
+CURVES.forEach(c => {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.textContent = c.name;
+  btn.addEventListener('click', () => select(c));
+  $('tabs').appendChild(btn);
+});
+$('play').addEventListener('click', play);
+$('frames').addEventListener('input', e => { $('framesOut').textContent = e.target.value; });
+select(current);
+</script>
+</body>
+</html>
